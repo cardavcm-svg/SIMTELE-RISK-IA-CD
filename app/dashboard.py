@@ -6,6 +6,7 @@ import os
 import sqlite3
 import pandas as pd
 from datetime import datetime
+import joblib
 
 # --- CONFIGURACIÓN DE RUTAS ---
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -41,7 +42,7 @@ st.set_page_config(page_title="SIMTELE-RISK", page_icon="🚡", layout="wide")
 
 # --- MENÚ LATERAL ---
 st.sidebar.title("🚡 SIMTELE-RISK")
-menu = st.sidebar.radio("Navegación", ["Inicio", "Módulo 1: Detención", "Módulo 2: Deterioro", "Módulo 3: Oscilaciones", "Módulo 4: Sensores", "Historial"])
+menu = st.sidebar.radio("Navegación", ["Inicio", "Módulo 1: Detención", "Módulo 2: Deterioro", "Módulo 3: Oscilaciones", "Módulo 4: Sensores", "🤖 Predicción IA", "Historial"])
 
 # ==========================================
 # PÁGINA DE INICIO
@@ -189,6 +190,48 @@ elif menu == "Módulo 4: Sensores":
         ax.scatter([x_faltante], [y_estimado], color='green', s=100, label="Punto Reconstruido")
         ax.legend()
         st.pyplot(fig)
+
+# ==========================================
+# PESTAÑA DE PREDICCIÓN CON IA
+# ==========================================
+elif menu == "🤖 Predicción IA":
+    st.title("🤖 Predicción con Machine Learning")
+    st.markdown("Este módulo utiliza un modelo de **Random Forest** entrenado con 5,000 simulaciones numéricas previas para predecir la distancia de frenado.")
+    
+    try:
+        # Ruta para encontrar el modelo entrenado
+        ruta_modelo = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src', 'numerical_engine', 'ml_models', 'modelo_rf.pkl'))
+        modelo = joblib.load(ruta_modelo)
+        
+        st.sidebar.header("Parámetros para la IA")
+        v0_ia = st.sidebar.number_input("Velocidad inicial (m/s)", value=7.5)
+        tr_ia = st.sidebar.number_input("Tiempo de reacción (s)", value=1.5)
+        a_ia = st.sidebar.number_input("Desaceleración (m/s²)", value=1.2)
+        d_disp_ia = st.sidebar.number_input("Distancia disponible (m)", value=50.0)
+        
+        if st.sidebar.button("Predecir con IA"):
+            # Hacemos la predicción
+            entrada = np.array([[v0_ia, tr_ia, a_ia, d_disp_ia]])
+            prediccion = modelo.predict(entrada)[0]
+            
+            st.success(f"🔮 **Distancia de detención predicha:** {prediccion:.2f} metros")
+            
+            if prediccion > d_disp_ia:
+                st.error("🚨 Alerta: El modelo predice una colisión con la distancia disponible actual.")
+            else:
+                st.info("✅ El modelo predice una detención segura.")
+                
+            # Mostrar la importancia de las variables
+            importancias = modelo.feature_importances_
+            variables = ['Velocidad Inicial', 'Tiempo Reacción', 'Desaceleración', 'Distancia Disp.']
+            fig, ax = plt.subplots()
+            ax.barh(variables, importancias, color='teal')
+            ax.set_xlabel('Importancia relativa')
+            ax.set_title('¿Qué variables influyen más en la IA?')
+            st.pyplot(fig)
+            
+    except FileNotFoundError:
+        st.warning("⚠️ El modelo de IA aún no ha sido entrenado. Por favor, ejecuta el script `generar_y_entrenar.py` en tu computadora.")
 
 # ==========================================
 # HISTORIAL
