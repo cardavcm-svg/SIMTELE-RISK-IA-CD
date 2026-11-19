@@ -1,4 +1,4 @@
-8import numpy as np
+import numpy as np
 
 def rk2_heun(f_x, f_v, t0, x0, v0, tf, h):
     """
