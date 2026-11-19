@@ -7,9 +7,9 @@ import joblib
 import sys
 import os
 
-# Conectamos con el motor numérico
+# Conectamos con el motor numérico (Ruta corregida)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from numerical_engine.edos import rk4
+from edos import rk4  # <--- CORREGIDO AQUÍ
 
 def generar_datos(n_simulaciones=5000):
     print(f"Generando {n_simulaciones} escenarios sintéticos...")
@@ -50,9 +50,11 @@ def generar_datos(n_simulaciones=5000):
 
 # 1. Generar y guardar el Dataset
 df = generar_datos(5000)
-os.makedirs('../data', exist_ok=True)
-df.to_csv('../data/dataset_simtele.csv', index=False)
-print("Dataset guardado en data/dataset_simtele.csv")
+# Guardamos en la carpeta data de la raíz del proyecto
+ruta_data = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data'))
+os.makedirs(ruta_data, exist_ok=True)
+df.to_csv(os.path.join(ruta_data, 'dataset_simtele.csv'), index=False)
+print(f"Dataset guardado en {ruta_data}")
 
 # 2. Entrenar el modelo de IA (Random Forest)
 print("Entrenando modelo de Random Forest...")
@@ -72,7 +74,7 @@ rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 print(f"Error Absoluto Medio (MAE): {mae:.4f} m")
 print(f"Raíz del Error Cuadrático Medio (RMSE): {rmse:.4f} m")
 
-# 4. Guardar el modelo entrenado
-os.makedirs('ml_models', exist_ok=True)
-joblib.dump(modelo_rf, 'ml_models/modelo_rf.pkl')
-print("Modelo guardado en ml_models/modelo_rf.pkl")
+# 4. Guardar el modelo entrenado en la misma carpeta
+ruta_modelo = os.path.abspath(os.path.join(os.path.dirname(__file__), 'modelo_rf.pkl'))
+joblib.dump(modelo_rf, ruta_modelo)
+print(f"Modelo guardado en {ruta_modelo}")
