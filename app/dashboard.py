@@ -111,24 +111,84 @@ elif menu == "Módulo 1: Detención":
         st.pyplot(fig)
 
 # ==========================================
-# MÓDULOS 2, 3 Y 4 (Estructura para Semana 2)
+# MÓDULO 2: DETERIORO (Raíces)
 # ==========================================
 elif menu == "Módulo 2: Deterioro":
     st.title("Módulo 2: Deterioro Mecánico")
-    st.write("🔧 *En construcción para la Semana 3.*")
-    st.latex(r"D(t) = D_0 + \alpha t + \beta t^2")
-    st.info("Aquí se implementarán los métodos de Raíces: Bisección, Newton-Raphson y Secante.")
+    st.write("Búsqueda del tiempo \(t\) donde el deterioro alcanza el umbral.")
+    st.latex(r"D(t) = D_0 + \alpha t + \beta t^2 = D_{umbral}")
+    
+    D0 = st.sidebar.number_input("D_0 (inicial)", value=10.0)
+    alpha = st.sidebar.number_input("alpha (lineal)", value=0.5)
+    beta = st.sidebar.number_input("beta (cuadrático)", value=0.05)
+    umbral = st.sidebar.number_input("Umbral de inspección", value=50.0)
+    
+    if st.sidebar.button("Ejecutar Bisección"):
+        from src.numerical_engine.otros_metodos import biseccion
+        # f(t) = D(t) - umbral = 0
+        f = lambda t: (D0 + alpha*t + beta*t**2) - umbral
+        
+        raiz, iter_count, historial = biseccion(f, 0, 100, tol=1e-5)
+        
+        if isinstance(historial, str):
+            st.error(historial)
+        else:
+            st.success(f"El umbral se alcanza en t = {raiz:.4f} (aprox)")
+            st.write(f"Iteraciones: {iter_count}")
+            df = pd.DataFrame(historial, columns=["Iter", "t", "f(t)", "Error"])
+            st.dataframe(df)
 
+# ==========================================
+# MÓDULO 3: OSCILACIONES (Integración)
+# ==========================================
 elif menu == "Módulo 3: Oscilaciones":
     st.title("Módulo 3: Oscilaciones por Viento")
-    st.write("🌬️ *En construcción para la Semana 3.*")
-    st.latex(r"m \frac{d^2x}{dt^2} + c \frac{dx}{dt} + kx = F(t)")
-    st.info("Aquí se implementará la Integración Numérica: Trapecio, Simpson 1/3 y Romberg.")
+    st.write("Integración de la función de velocidad del viento para calcular desplazamiento acumulado.")
+    st.latex(r"\int_{0}^{T} |v(t)| dt")
+    
+    A = st.sidebar.number_input("Amplitud del viento", value=2.0)
+    w = st.sidebar.number_input("Frecuencia angular", value=1.5)
+    T = st.sidebar.number_input("Tiempo total (s)", value=10.0)
+    n = st.sidebar.slider("Subintervalos (n)", 10, 1000, 100)
+    
+    if st.sidebar.button("Calcular Integral"):
+        from src.numerical_engine.otros_metodos import trapecio, simpson_13
+        f_viento = lambda t: abs(A * np.sin(w * t))
+        
+        val_trap = trapecio(f_viento, 0, T, n)
+        val_simp = simpson_13(f_viento, 0, T, n)
+        
+        st.metric("Trapecio", f"{val_trap:.5f}")
+        st.metric("Simpson 1/3", f"{val_simp:.5f}")
+        st.info("La diferencia entre ambos se debe al error de truncamiento.")
 
+# ==========================================
+# MÓDULO 4: SENSORES (Interpolación)
+# ==========================================
 elif menu == "Módulo 4: Sensores":
     st.title("Módulo 4: Reconstrucción de Sensores")
-    st.write("📡 *En construcción para la Semana 3.*")
-    st.info("Aquí se implementará la Interpolación: Lagrange, Newton y Splines Cúbicos.")
+    st.write("Reconstrucción de un dato faltante usando Interpolación de Lagrange.")
+    
+    x_puntos = np.array([0, 1, 2, 4, 5])
+    y_puntos = np.array([0, 0.84, 0.91, -0.75, -0.95]) # Simula sin(t) aprox
+    x_faltante = st.sidebar.slider("Punto a interpolar (x)", 0.0, 5.0, 3.0)
+    
+    if st.sidebar.button("Interpolar"):
+        from src.numerical_engine.otros_metodos import lagrange
+        y_estimado = lagrange(x_puntos, y_puntos, x_faltante)
+        
+        st.success(f"Valor reconstruido en x={x_faltante}: {y_estimado:.4f}")
+        
+        # Gráfico
+        fig, ax = plt.subplots()
+        x_plot = np.linspace(0, 5, 100)
+        y_plot = [lagrange(x_puntos, y_puntos, xi) for xi in x_plot]
+        
+        ax.plot(x_plot, y_plot, 'b-', label="Curva Interpolada")
+        ax.scatter(x_puntos, y_puntos, color='red', label="Datos Sensores")
+        ax.scatter([x_faltante], [y_estimado], color='green', s=100, label="Punto Reconstruido")
+        ax.legend()
+        st.pyplot(fig)
 
 # ==========================================
 # HISTORIAL
