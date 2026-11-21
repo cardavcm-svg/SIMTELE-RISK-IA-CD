@@ -183,18 +183,80 @@ if menu == "Inicio":
     st.dataframe(logs, use_container_width=True, hide_index=True)
 
 # ==========================================
-# MÓDULO 1: DETENCIÓN
+# MÓDULO 1: DETENCIÓN (DISEÑO CENTRO DE COMANDOS)
 # ==========================================
 elif menu == "Módulo 1: Detención":
-    st.title("🛑 Consola de Detención de Emergencia")
+    # --- CSS PERSONALIZADO PARA ESTE MÓDULO ---
+    st.markdown("""
+        <style>
+        /* Estilo de fondo y contenedores */
+        .stApp { background-color: #0d1117; }
+        
+        /* Título principal */
+        .module-title {
+            color: #58a6ff;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* Panel de estado (Semáforo) */
+        .status-panel {
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border: 1px solid #30363d;
+        }
+        .status-safe { background-color: #238636; color: #ffffff; border-left: 10px solid #2ea043; }
+        .status-warning { background-color: #9e6a03; color: #ffffff; border-left: 10px solid #d29922; }
+        .status-danger { background-color: #da3633; color: #ffffff; border-left: 10px solid #f85149; }
+        
+        /* Paneles de métricas */
+        .metric-box {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            color: #c9d1d9;
+            font-family: 'Courier New', monospace;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #58a6ff;
+            margin-top: 5px;
+        }
+        
+        /* Separador de consola */
+        .console-divider {
+            border-top: 1px dashed #30363d;
+            margin: 30px 0;
+            text-align: center;
+            color: #8b949e;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<h1 class='module-title'>🛑 Consola 01 // Detención de Emergencia</h1>", unsafe_allow_html=True)
     
     # Panel informativo de métodos numéricos
-    with st.expander("⚙️ Herramientas Numéricas Utilizadas en este Módulo", expanded=False):
+    with st.expander("⚙️ Herramientas Numéricas Utilizadas", expanded=False):
         st.markdown("""
-        *   **Ecuaciones Diferenciales Ordinarias (EDOs):** Método de **Runge-Kutta 4to Orden (RK4)** para calcular la trayectoria.
-        *   **Integración Numérica:** Verificación del desplazamiento mediante **Trapecio** y **Simpson 1/3**.
-        *   **Teoría de Errores:** Cálculo del **Error Relativo Porcentual** comparando la solución numérica con la analítica exacta.
-        *   **Mal Condicionamiento:** Alteración del paso de integración (\(h\)) para demostrar inestabilidad numérica.
+        *   **EDOs:** Runge-Kutta 4 (RK4) para simulación de trayectoria.
+        *   **Integración Numérica:** Verificación de desplazamiento (Trapecio/Simpson).
+        *   **Teoría de Errores:** Cálculo de error relativo vs Solución Analítica.
+        *   **Mal Condicionamiento:** Simulación con paso \(h=0.5\).
         """)
 
     escenario = st.sidebar.selectbox("Escenario Operativo", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
@@ -211,14 +273,13 @@ elif menu == "Módulo 1: Detención":
     a = st.sidebar.number_input("Desaceleración (m/s²)", value=a_def)
     d_disp = st.sidebar.number_input("Distancia disponible (m)", value=d_def)
     
-    if st.sidebar.button("Ejecutar Simulación", type="primary"):
+    if st.sidebar.button("▶ EJECUTAR PROTOCOLO", type="primary", use_container_width=True):
         d_ana = (v0 * tr) + (v0**2 / (2*a))
         t_ana = tr + (v0/a)
         
         def f_x(t, x, v): return v
         def f_v(t, x, v): return -a if t > tr else 0.0
         
-        # Paso dinámico
         paso = 0.01 if escenario != "MAL CONDICIONADO" else 0.5
         
         t_vals, x_vals, v_vals = rk4(f_x, f_v, 0, 0, v0, t_ana + 2.0, paso)
@@ -227,74 +288,74 @@ elif menu == "Módulo 1: Detención":
         t_num = t_vals[idx[0]] if len(idx) > 0 else t_vals[-1]
         
         err_rel = abs(d_ana - d_num) / d_ana * 100
-        
-        # --- SEMÁFORO PRINCIPAL ---
-        st.markdown("### Estado de la Cabina")
         margen = d_disp - d_num
         
+        # --- SEMÁFORO PRINCIPAL ---
         if margen > 5.0: 
-            st.success(f"🟢 **ESTADO: SEGURO** | Margen de Frenado: {margen:.2f} m | La cabina se detiene a salvo.")
+            st.markdown(f'<div class="status-panel status-safe">🟢 SISTEMA SEGURO // Margen de Frenado: {margen:.2f} m</div>', unsafe_allow_html=True)
         elif margen > 0: 
-            st.warning(f"🟡 **ESTADO: PRECAUCIÓN** | Margen Crítico: {margen:.2f} m | Frenado al límite.")
+            st.markdown(f'<div class="status-panel status-warning">🟡 PRECAUCIÓN // Margen Crítico: {margen:.2f} m</div>', unsafe_allow_html=True)
         else: 
-            st.error(f"🔴 **ESTADO: PELIGRO DE COLISIÓN** | Déficit: {abs(margen):.2f} m | ¡Frenado insuficiente!")
+            st.markdown(f'<div class="status-panel status-danger">🔴 PELIGRO DE COLISIÓN // Déficit: {abs(margen):.2f} m</div>', unsafe_allow_html=True)
             
         if escenario == "MAL CONDICIONADO":
-            st.info(f"🔬 **Análisis Numérico:** El paso de integración es h={paso}. Un paso grande genera un error de truncamiento severo, evidenciando el mal condicionamiento del método RK4 en este escenario.")
+            st.warning(f"⚠️ **Inestabilidad Numérica:** Paso de integración h={paso}. El error de truncamiento es severo (Mal Condicionamiento).")
         
-        st.divider()
+        st.markdown("<div class='console-divider'>[ INICIO DE TELEMETRÍA ]</div>", unsafe_allow_html=True)
         
         # --- TELEMETRÍA (Métricas) ---
-        st.markdown("#### 📊 Telemetría de Frenado")
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Distancia Analítica", f"{d_ana:.4f} m")
-        c2.metric("Distancia Numérica (RK4)", f"{d_num:.4f} m")
-        c3.metric("Tiempo de Detención", f"{t_num:.2f} s")
-        c4.metric("Error Relativo", f"{err_rel:.4f} %", delta_color="inverse")
+        with c1:
+            st.markdown(f'<div class="metric-box">Distancia Teórica<div class="metric-value">{d_ana:.2f} m</div></div>', unsafe_allow_html=True)
+        with c2:
+            st.markdown(f'<div class="metric-box">Distancia RK4<div class="metric-value">{d_num:.2f} m</div></div>', unsafe_allow_html=True)
+        with c3:
+            st.markdown(f'<div class="metric-box">Tiempo Detención<div class="metric-value">{t_num:.2f} s</div></div>', unsafe_allow_html=True)
+        with c4:
+            color_err = "#f85149" if err_rel > 1.0 else "#2ea043"
+            st.markdown(f'<div class="metric-box">Error Relativo<div class="metric-value" style="color:{color_err};">{err_rel:.4f} %</div></div>', unsafe_allow_html=True)
         
         guardar_simulacion(escenario, v0, tr, a, d_disp, d_ana, d_num, err_rel)
-        st.toast("✅ Simulación guardada en el historial", icon="💾")
+        st.toast("✅ Datos guardados en la base de datos", icon="💾")
         
-        st.divider()
+        st.markdown("<div class='console-divider'>[ VISUALIZACIÓN DE DATOS ]</div>", unsafe_allow_html=True)
         
         # --- GRÁFICOS ---
-        st.markdown("#### 📈 Análisis Gráfico")
+        # Usamos un tema oscuro para matplotlib para que combine
+        plt.style.use('dark_background') 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
         
         # Gráfico 1: Velocidad
-        ax1.plot(t_vals, v_vals, 'b-', linewidth=2, label='Velocidad (RK4)')
-        ax1.axvline(x=tr, color='orange', linestyle='--', label='Fin de Reacción')
-        ax1.axvline(x=t_num, color='green', linestyle='--', label='Detención Total')
+        ax1.plot(t_vals, v_vals, color='#58a6ff', linewidth=2, label='Velocidad (RK4)')
+        ax1.axvline(x=tr, color='#d29922', linestyle='--', label='Fin de Reacción')
+        ax1.axvline(x=t_num, color='#2ea043', linestyle='--', label='Detención Total')
         ax1.set_xlabel('Tiempo (s)')
         ax1.set_ylabel('Velocidad (m/s)')
         ax1.set_title('Perfil de Velocidad')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right')
+        ax1.grid(True, color='#30363d', linestyle=':')
         
         # Gráfico 2: Posición
-        ax2.plot(t_vals, x_vals, 'm-', linewidth=2, label='Posición (RK4)')
-        ax2.axhline(y=d_disp, color='red', linestyle='--', label='Límite Disponible')
+        ax2.plot(t_vals, x_vals, color='#d2a8ff', linewidth=2, label='Posición (RK4)')
+        ax2.axhline(y=d_disp, color='#f85149', linestyle='--', label='Límite Disponible')
         ax2.set_xlabel('Tiempo (s)')
         ax2.set_ylabel('Posición (m)')
         ax2.set_title('Perfil de Posición')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='lower right')
+        ax2.grid(True, color='#30363d', linestyle=':')
         
         st.pyplot(fig)
         
         # --- TABLA DE ITERACIONES ---
-        st.markdown("#### 📋 Tabla de Refinamiento Numérico (Primeros 10 pasos)")
-        st.write("Muestra la evolución paso a paso del método Runge-Kutta 4.")
+        st.markdown("<div class='console-divider'>[ REGISTRO DE DISCRETIZACIÓN ]</div>", unsafe_allow_html=True)
         
-        # Creamos un dataframe con los primeros 10 pasos
         df_pasos = pd.DataFrame({
-            "Paso": range(1, 11),
+            "Iteración": range(1, 11),
             "Tiempo t (s)": t_vals[:10],
             "Posición x (m)": x_vals[:10],
             "Velocidad v (m/s)": v_vals[:10]
         })
-        st.dataframe(df_pasos, use_container_width=True)
-
+        st.dataframe(df_pasos, use_container_width=True, hide_index=True)
 # ==========================================
 # MÓDULO 2: DETERIORO (RAÍCES)
 # ==========================================
