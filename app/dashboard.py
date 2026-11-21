@@ -70,6 +70,25 @@ if menu == "Inicio":
         
         /* Título principal */
         h1 { color: #FFFFFF; text-shadow: 0px 0px 10px rgba(255,255,255,0.2); }
+        
+        /* Estilo para las tarjetas de los módulos */
+        .module-card {
+            background-color: #1E2129;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            transition: transform 0.2s;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        .module-card:hover {
+            border: 1px solid #00A86B;
+            transform: scale(1.02);
+        }
+        .module-icon { font-size: 50px; margin-bottom: 10px; }
+        .module-title { font-weight: bold; font-size: 18px; color: #FFF; margin-bottom: 5px;}
+        .module-desc { font-size: 14px; color: #AAA; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -92,56 +111,54 @@ if menu == "Inicio":
 
     st.divider()
 
-    # --- CONSOLAS DE DIAGNÓSTICO ---
+    # --- CONSOLAS DE DIAGNÓSTICO (Tarjetas Interactivas) ---
     st.subheader("🖥️ Consolas de Diagnóstico")
-    st.write("Accede a las herramientas de análisis y simulación del sistema.")
+    st.write("Haz clic en una tarjeta para acceder al módulo correspondiente.")
 
-    # Panel de Módulos (2 columnas)
     col_a, col_b = st.columns(2)
 
     with col_a:
-        with st.container():
-            st.markdown("### 🛑 Consola 1: Detención")
-            st.caption("Evaluación de frenado y márgenes de seguridad.")
-            if st.button("Abrir Módulo 1", use_container_width=True):
-                st.session_state.menu = "Módulo 1: Detención" # Esto es solo estético
-            st.success("Estado: **EN LÍNEA**")
-            st.divider()
+        # Tarjeta Módulo 1
+        st.markdown('<div class="module-card"><div class="module-icon">🛑</div><div class="module-title">Módulo 1: Detención</div><div class="module-desc">Evaluación de frenado y márgenes de seguridad.</div></div>', unsafe_allow_html=True)
+        if st.button("Abrir Consola de Detención", use_container_width=True):
+            st.session_state.menu = "Módulo 1: Detención"
+            st.rerun()
 
-        with st.container():
-            st.markdown("### 🌬️ Consola 3: Viento")
-            st.caption("Análisis de oscilaciones y ráfagas.")
-            st.success("Estado: **EN LÍNEA**")
-            st.divider()
+        # Tarjeta Módulo 3
+        st.markdown('<div class="module-card"><div class="module-icon">🌬️</div><div class="module-title">Módulo 3: Oscilaciones</div><div class="module-desc">Análisis de viento y desplazamiento acumulado.</div></div>', unsafe_allow_html=True)
+        if st.button("Abrir Consola de Viento", use_container_width=True):
+            st.session_state.menu = "Módulo 3: Oscilaciones"
+            st.rerun()
 
-        with st.container():
-            st.markdown("### 📐 Consola 5: Calibración")
-            st.caption("Sistemas lineales para ajuste de sensores.")
-            st.success("Estado: **EN LÍNEA**")
+        # Tarjeta Módulo 5
+        st.markdown('<div class="module-card"><div class="module-icon">📐</div><div class="module-title">Módulo 5: Calibración</div><div class="module-desc">Sistemas lineales para sensores.</div></div>', unsafe_allow_html=True)
+        if st.button("Abrir Consola de Calibración", use_container_width=True):
+            st.session_state.menu = "Módulo 5: Sistemas Lineales"
+            st.rerun()
 
     with col_b:
-        with st.container():
-            st.markdown("### ⚙️ Consola 2: Deterioro")
-            st.caption("Mantenimiento predictivo de cabinas.")
-            st.success("Estado: **EN LÍNEA**")
-            st.divider()
+        # Tarjeta Módulo 2
+        st.markdown('<div class="module-card"><div class="module-icon">⚙️</div><div class="module-title">Módulo 2: Deterioro</div><div class="module-desc">Mantenimiento predictivo de cabinas.</div></div>', unsafe_allow_html=True)
+        if st.button("Abrir Consola de Deterioro", use_container_width=True):
+            st.session_state.menu = "Módulo 2: Deterioro"
+            st.rerun()
 
-        with st.container():
-            st.markdown("### 📡 Consola 4: Telemetría")
-            st.caption("Reconstrucción de datos de sensores perdidos.")
-            st.success("Estado: **EN LÍNEA**")
-            st.divider()
+        # Tarjeta Módulo 4
+        st.markdown('<div class="module-card"><div class="module-icon">📡</div><div class="module-title">Módulo 4: Telemetría</div><div class="module-desc">Reconstrucción de datos con interpolación.</div></div>', unsafe_allow_html=True)
+        if st.button("Abrir Consola de Telemetría", use_container_width=True):
+            st.session_state.menu = "Módulo 4: Sensores"
+            st.rerun()
 
-        with st.container():
-            st.markdown("### 🤖 Consola IA: Predicción")
-            st.caption("Machine Learning (Random Forest) para frenado.")
-            st.success("Estado: **ENTRENADA** (5,000 registros)")
+        # Tarjeta IA
+        st.markdown('<div class="module-card"><div class="module-icon">🤖</div><div class="module-title">Módulo IA: Predicción</div><div class="module-desc">Machine Learning (Random Forest).</div></div>', unsafe_allow_html=True)
+        if st.button("Abrir Consola de IA", use_container_width=True):
+            st.session_state.menu = "🤖 Predicción IA"
+            st.rerun()
 
     # --- PANEL DE LOGS (Simulación de sistema) ---
     st.divider()
     st.subheader("📜 Registro de Eventos Reciente")
     
-    # Creamos un dataframe falso solo para que parezca una consola de logs real
     logs = pd.DataFrame({
         "Hora": ["12:00:01", "12:01:15", "12:05:30", "12:10:00"],
         "Evento": [
