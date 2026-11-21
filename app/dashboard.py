@@ -309,43 +309,123 @@ elif menu == "Módulo 1: Detención":
 # MÓDULO 2: DETERIORO (RAÍCES)
 # ==========================================
 elif menu == "Módulo 2: Deterioro":
-    st.title("Consola de Deterioro Mecánico")
+    st.markdown("<h1 style='font-family: Courier New; color: #58a6ff;'>⚙️ Consola 02 // Deterioro Mecánico</h1>", unsafe_allow_html=True)
+    
+    # --- PANEL EXPLICATIVO DE MÉTODOS NUMÉRICOS ---
+    with st.expander("📚 Ver Fundamento Numérico y Fórmulas Matemáticas", expanded=False):
+        st.markdown("""
+        ### 🧮 Herramientas Numéricas en esta Consola
+        
+        Esta consola resuelve el problema de mantenimiento encontrando la raíz de una ecuación no lineal.
+        
+        **1. Métodos de Búsqueda de Raíces:**
+        *   *¿Qué hace?* Encuentra el tiempo \(t\) exacto donde el deterioro \(D(t)\) iguala al umbral permitido.
+        *   *Función a resolver:* 
+        """)
+        st.latex(r"f(t) = D_0 + \alpha t + \beta t^2 - D_{umbral} = 0")
+        st.markdown("""
+        *   *Métodos implementados:*
+            *   **Bisección:** Cierra el intervalo a la mitad iterativamente (lento pero seguro).
+            *   **Newton-Raphson:** Usa la derivada \(f'(t)\) para converger rápidamente (requiere buena semilla).
+            *   **Secante:** Aproxima la derivada usando dos puntos (no requiere derivada analítica).
+        
+        **2. Teoría de Errores (Residuo):**
+        *   *¿Qué hace?* Evalúa \(|f(t)|\) en cada iteración para saber qué tan cerca estamos de la raíz exacta.
+        *   *Fórmula base:* 
+        """)
+        st.latex(r"Error = |t_{nuevo} - t_{anterior}|")
+        st.markdown("""
+        **3. Mal Condicionamiento:**
+        *   *¿Qué hace?* En el escenario MAL CONDICIONADO, la función tiene una raíz múltiple (la curva es tangente al eje X). Esto hace que la derivada sea casi cero y que métodos como Newton-Raphson fallen o converjan extremadamente lento.
+        """)
+    
+    st.divider()
+
+    # 1. Controles en la barra lateral
     escenario = st.sidebar.selectbox("Escenario Operativo", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
     
-    if escenario == "NORMAL": D0, alpha, beta, umbral = 10.0, 0.5, 0.05, 50.0
-    elif escenario == "ESTRÉS": D0, alpha, beta, umbral = 10.0, 0.8, 0.1, 50.0
-    else: D0, alpha, beta, umbral = 10.0, 0.0, 0.0001, 50.0 
+    if escenario == "NORMAL":
+        D0, alpha, beta, umbral = 10.0, 0.5, 0.05, 50.0
+    elif escenario == "ESTRÉS":
+        D0, alpha, beta, umbral = 10.0, 0.8, 0.1, 50.0
+    else: 
+        D0, alpha, beta, umbral = 10.0, 0.0, 0.0001, 50.0 # Raíz múltiple
     
-    D0 = st.sidebar.number_input("D_0 (Inicial)", value=D0)
-    alpha = st.sidebar.number_input("alpha (Lineal)", value=alpha)
-    beta = st.sidebar.number_input("beta (Cuadrático)", value=beta)
+    D0 = st.sidebar.number_input("D_0 (Deterioro Inicial)", value=D0)
+    alpha = st.sidebar.number_input("alpha (Componente Lineal)", value=alpha)
+    beta = st.sidebar.number_input("beta (Componente Cuadrático)", value=beta)
     umbral = st.sidebar.number_input("Umbral de Inspección", value=umbral)
+    
     metodo = st.sidebar.selectbox("Método Numérico", ["Bisección", "Newton-Raphson", "Secante"])
     
-    if st.sidebar.button("Calcular Raíz"):
-        f = lambda t: (D0 + alpha*t + beta*t**2) - umbral
-        df = lambda t: alpha + 2*beta*t
+    ejecutar = st.sidebar.button("▶ GUARDAR EN HISTORIAL", type="primary", use_container_width=True)
+
+    # 2. Lógica de simulación automática
+    f = lambda t: (D0 + alpha*t + beta*t**2) - umbral
+    df = lambda t: alpha + 2*beta*t
+    
+    if metodo == "Bisección":
+        raiz, it, hist = biseccion(f, 0, 100, tol=1e-5)
+    elif metodo == "Newton-Raphson":
+        # Semilla en 50 para que busque en el rango positivo
+        raiz, it, hist = newton_raphson(f, df, 50, tol=1e-5)
+    else:
+        raiz, it, hist = secante(f, 0, 100, tol=1e-5)
+
+    # 3. Guardar en la base de datos (solo si presiona el botón)
+    if ejecutar:
+        # Reutilizamos la función guardar_simulacion pero adaptamos los datos
+        guardar_simulacion(f"M2 - {escenario}", D0, alpha, beta, umbral, raiz, raiz, 0.0)
+        st.toast("✅ Simulación de mantenimiento guardada", icon="💾")
+
+    # 4. Renderizado Visual (Siempre visible)
+    st.markdown("### Estado de Mantenimiento")
+    
+    if isinstance(hist, str):
+        st.error(f"🔴 **FALLO NUMÉRICO:** {hist}")
+    else:
+        # Semáforo de mantenimiento
+        if raiz < 20.0: 
+            st.markdown(f'<div style="background-color:#da3633; padding:20px; border-radius:8px; border-left:10px solid #f85149; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🔴 ALERTA CRÍTICA: Inspección requerida en {raiz:.2f} días.</div>', unsafe_allow_html=True)
+        elif raiz < 60.0: 
+            st.markdown(f'<div style="background-color:#9e6a03; padding:20px; border-radius:8px; border-left:10px solid #d29922; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🟡 PRECAUCIÓN: Programar inspección en {raiz:.2f} días.</div>', unsafe_allow_html=True)
+        else: 
+            st.markdown(f'<div style="background-color:#238636; padding:20px; border-radius:8px; border-left:10px solid #2ea043; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🟢 ESTADO ÓPTIMO: Margen de {raiz:.2f} días hasta el umbral.</div>', unsafe_allow_html=True)
+
+        if escenario == "MAL CONDICIONADO":
+            st.warning(f"⚠️ **Inestabilidad Numérica (Mal Condicionamiento):** Raíz múltiple detectada. La derivada \(f'(t)\) cercana a cero hace que el método {metodo} tenga problemas de convergencia.")
+
+        # Métricas
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Tiempo al Umbral", f"{raiz:.4f} días")
+        c2.metric("Iteraciones", it)
+        c3.metric("Método Usado", metodo)
+
+        # Gráficos (Oscuros)
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(10, 4))
         
-        if metodo == "Bisección": raiz, it, hist = biseccion(f, 0, 100, tol=1e-5)
-        elif metodo == "Newton-Raphson": raiz, it, hist = newton_raphson(f, df, 50, tol=1e-5)
-        else: raiz, it, hist = secante(f, 0, 100, tol=1e-5)
-            
-        if isinstance(hist, str):
-            st.error(hist)
-        else:
-            st.header(f"Resultados de Mantenimiento: {escenario}")
-            
-            # Semáforo
-            if raiz < 20.0: st.error(f"🔴 **ALERTA MANTENIMIENTO:** Umbral en {raiz:.2f} días. Inspección inmediata requerida.")
-            elif raiz < 50.0: st.warning(f"🟡 **PRECAUCIÓN:** Umbral en {raiz:.2f} días. Programar inspección.")
-            else: st.success(f"🟢 **ESTADO ÓPTIMO:** Umbral en {raiz:.2f} días. Sin riesgos inmediatos.")
-            
-            if escenario == "MAL CONDICIONADO":
-                st.warning("⚠️ Alerta: Raíz múltiple detectada. La derivada cercana a cero causa que el método converja muy lentamente (Mal Condicionamiento).")
-                
-            st.metric("Iteraciones Realizadas", it)
-            df_res = pd.DataFrame(hist, columns=["Iter", "t", "f(t)", "Error"])
-            st.dataframe(df_res)
+        # Graficamos la función de deterioro
+        t_plot = np.linspace(0, max(100, raiz + 20), 200)
+        y_plot = f(t_plot)
+        
+        ax.plot(t_plot, y_plot, color='#58a6ff', linewidth=2, label='f(t) = Deterioro - Umbral')
+        ax.axhline(y=0, color='#f85149', linestyle='--', label='Eje X (Umbral)')
+        ax.scatter([raiz], [0], color='#2ea043', s=100, zorder=5, label='Raíz Encontrada')
+        
+        ax.set_title(f'Convergencia del Método: {metodo}')
+        ax.set_xlabel('Tiempo (días)')
+        ax.set_ylabel('Diferencia de Deterioro')
+        ax.legend()
+        ax.grid(True, color='#30363d', linestyle=':')
+        
+        st.pyplot(fig)
+
+        # Tabla de iteraciones
+        with st.expander("📋 Ver Tabla de Iteraciones"):
+            st.write(f"Método: {metodo} | Tolerancia: 1e-5")
+            df_res = pd.DataFrame(hist, columns=["Iteración", "t (aprox)", "f(t)", "Error Absoluto"])
+            st.dataframe(df_res, use_container_width=True, hide_index=True)
 
 # ==========================================
 # MÓDULO 3: OSCILACIONES (INTEGRACIÓN)
