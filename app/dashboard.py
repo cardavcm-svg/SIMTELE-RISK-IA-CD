@@ -431,40 +431,126 @@ elif menu == "Módulo 2: Deterioro":
 # MÓDULO 3: OSCILACIONES (INTEGRACIÓN)
 # ==========================================
 elif menu == "Módulo 3: Oscilaciones":
-    st.title("Consola de Oscilaciones por Viento")
+    st.markdown("<h1 style='font-family: Courier New; color: #58a6ff;'>🌬️ Consola 03 // Oscilaciones por Viento</h1>", unsafe_allow_html=True)
+    
+    # --- PANEL EXPLICATIVO DE MÉTODOS NUMÉRICOS ---
+    with st.expander("📚 Ver Fundamento Numérico y Fórmulas Matemáticas", expanded=False):
+        st.markdown("""
+        ### 🧮 Herramientas Numéricas en esta Consola
+        
+        Esta consola calcula el desplazamiento acumulado de la cabina debido a la fuerza del viento, resolviendo una integral definida.
+        
+        **1. Integración Numérica:**
+        *   *¿Qué hace?* Calcula el área bajo la curva de la función del viento \(v(t)\) para obtener el desplazamiento total.
+        *   *Fórmula base:* 
+        """)
+        st.latex(r"Desplazamiento = \int_{0}^{T} |A \cdot \sin(w \cdot t)| dt")
+        st.markdown("""
+        *   *Métodos implementados:*
+            *   **Trapecio:** Aproxima el área usando trapecios (Error \(O(h^2)\)).
+            *   **Simpson 1/3:** Usa parábolas para mayor precisión (Error \(O(h^4)\)).
+            *   **Romberg:** Aplica extrapolación de Richardson para acelerar la convergencia.
+        
+        **2. Teoría de Errores:**
+        *   *¿Qué hace?* Compara los tres métodos para ver cuál se acerca más al valor real. A mayor número de subintervalos (\(n\)), menor es el error.
+        *   *Fórmula base:* 
+        """)
+        st.latex(r"E_r = |Valor_{metodo} - Valor_{referencia}|")
+        st.markdown("""
+        **3. Mal Condicionamiento:**
+        *   *¿Qué hace?* En este escenario, la función de viento es una **onda cuadrada** (con discontinuidades). Los métodos de integración polinómica (como Simpson y Romberg) fallan o pierden precisión severamente ante discontinuidades.
+        """)
+    
+    st.divider()
+
+    # 1. Controles en la barra lateral
     escenario = st.sidebar.selectbox("Escenario Operativo", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
     
-    if escenario == "NORMAL": A, w, T = 2.0, 1.5, 10.0
-    elif escenario == "ESTRÉS": A, w, T = 5.0, 3.0, 20.0
-    else: A, w, T = 2.0, 1.5, 10.0
+    if escenario == "NORMAL":
+        A, w, T = 2.0, 1.5, 10.0
+    elif escenario == "ESTRÉS":
+        A, w, T = 5.0, 3.0, 20.0 # Mayor amplitud y frecuencia
+    else: 
+        A, w, T = 2.0, 1.5, 10.0
     
-    A = st.sidebar.number_input("Amplitud del Viento", value=A)
-    w = st.sidebar.number_input("Frecuencia Angular", value=w)
-    T = st.sidebar.number_input("Tiempo Total", value=T)
+    A = st.sidebar.number_input("Amplitud del Viento (A)", value=A)
+    w = st.sidebar.number_input("Frecuencia Angular (w)", value=w)
+    T = st.sidebar.number_input("Tiempo Total de Análisis (s)", value=T)
     n = st.sidebar.slider("Subintervalos (n)", 10, 1000, 100)
     
-    if st.sidebar.button("Calcular Integral"):
-        if escenario == "MAL CONDICIONADO": f_viento = lambda t: np.sign(np.sin(w*t)) * A 
-        else: f_viento = lambda t: abs(A * np.sin(w * t))
-            
-        val_trap = trapecio(f_viento, 0, T, n)
-        val_simp = simpson_13(f_viento, 0, T, n)
-        val_romb, _ = romberg(f_viento, 0, T, 5)
+    ejecutar = st.sidebar.button("▶ GUARDAR EN HISTORIAL", type="primary", use_container_width=True)
+
+    # 2. Lógica de simulación automática
+    if escenario == "MAL CONDICIONADO":
+        # Onda cuadrada (discontinua, mala para Simpson/Romberg)
+        f_viento = lambda t: np.sign(np.sin(w * t)) * A 
+    else:
+        # Función suave (senoidal)
+        f_viento = lambda t: abs(A * np.sin(w * t))
         
-        st.header(f"Resultados de Análisis de Viento: {escenario}")
+    val_trap = trapecio(f_viento, 0, T, n)
+    val_simp = simpson_13(f_viento, 0, T, n)
+    val_romb, _ = romberg(f_viento, 0, T, 5)
+
+    # 3. Guardar en la base de datos (solo si presiona el botón)
+    if ejecutar:
+        # Guardamos una simulación ficticia en el historial adaptada al Módulo 3
+        guardar_simulacion(f"M3 - {escenario}", A, w, T, n, val_trap, val_romb, 0.0)
+        st.toast("✅ Análisis de viento guardado", icon="💾")
+
+    # 4. Renderizado Visual
+    st.markdown("### Estado de Oscilación de la Cabina")
+    
+    # Semáforo basado en el desplazamiento acumulado (usando Romberg como referencia)
+    if val_romb > 40.0: 
+        st.markdown(f'<div style="background-color:#da3633; padding:20px; border-radius:8px; border-left:10px solid #f85149; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🔴 ALERTA DE BALANCEO: Desplazamiento crítico acumulado ({val_romb:.2f} m). Suspender operaciones.</div>', unsafe_allow_html=True)
+    elif val_romb > 20.0: 
+        st.markdown(f'<div style="background-color:#9e6a03; padding:20px; border-radius:8px; border-left:10px solid #d29922; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🟡 PRECAUCIÓN: Oscilaciones moderadas ({val_romb:.2f} m). Reducir velocidad.</div>', unsafe_allow_html=True)
+    else: 
+        st.markdown(f'<div style="background-color:#238636; padding:20px; border-radius:8px; border-left:10px solid #2ea043; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🟢 ESTADO SEGURO: Desplazamiento controlado ({val_romb:.2f} m).</div>', unsafe_allow_html=True)
+
+    if escenario == "MAL CONDICIONADO":
+        st.warning(f"⚠️ **Inestabilidad Numérica (Mal Condicionamiento):** La función del viento es discontinua (onda cuadrada). Observa cómo Romberg y Simpson pierden precisión frente a Trapecio debido a la falta de derivabilidad.")
+
+    # Métricas
+    st.markdown("#### 📊 Comparación de Métodos de Integración")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Trapecio", f"{val_trap:.5f} m")
+    c2.metric("Simpson 1/3", f"{val_simp:.5f} m")
+    c3.metric("Romberg", f"{val_romb:.5f} m")
+
+    # Gráficos (Oscuros)
+    plt.style.use('dark_background')
+    fig, ax = plt.subplots(figsize=(12, 5))
+    
+    # Generamos datos para graficar la curva del viento
+    t_plot = np.linspace(0, T, 500)
+    y_plot = f_viento(t_plot)
+    
+    ax.plot(t_plot, y_plot, color='#58a6ff', linewidth=2, label='Perfil del Viento \(|v(t)|\)')
+    ax.fill_between(t_plot, y_plot, color='#58a6ff', alpha=0.2, label='Área Integrada (Desplazamiento)')
+    
+    ax.set_title(f'Perfil de Oscilación (n={n} subintervalos)')
+    ax.set_xlabel('Tiempo (s)')
+    ax.set_ylabel('Magnitud del Viento / Desplazamiento')
+    ax.legend(loc='upper right')
+    ax.grid(True, color='#30363d', linestyle=':')
+    
+    st.pyplot(fig)
+
+    # Tabla comparativa de errores
+    with st.expander("📋 Ver Análisis de Convergencia y Errores"):
+        st.write(f"Subintervalos (n) = {n} | Tiempo Total = {T} s")
         
-        # Semáforo basado en amplitud
-        if val_trap > 40.0: st.error("🔴 **ALERTA:** Desplazamiento acumulado crítico. Peligro de balanceo severo.")
-        elif val_trap > 20.0: st.warning("🟡 **PRECAUCIÓN:** Oscilaciones moderadas. Monitorear velocidad del viento.")
-        else: st.success("🟢 **ESTADO SEGURO:** Desplazamiento dentro de los límites operativos.")
-            
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Trapecio", f"{val_trap:.5f}")
-        c2.metric("Simpson 1/3", f"{val_simp:.5f}")
-        c3.metric("Romberg", f"{val_romb:.5f}")
+        # Usamos Romberg como la "referencia" asumiendo que es el más preciso en Normal/Estres
+        ref = val_romb if escenario != "MAL CONDICIONADO" else val_trap
         
-        if escenario == "MAL CONDICIONADO":
-            st.warning("⚠️ Alerta: La función de viento es discontinua (onda cuadrada). Romberg pierde precisión severamente (Mal Condicionamiento).")
+        df_err = pd.DataFrame({
+            "Método": ["Trapecio", "Simpson 1/3", "Romberg"],
+            "Valor Calculado": [val_trap, val_simp, val_romb],
+            "Error Absoluto": [abs(val_trap - ref), abs(val_simp - ref), abs(val_romb - ref)]
+        })
+        st.dataframe(df_err, use_container_width=True, hide_index=True)
 
 # ==========================================
 # MÓDULO 4: SENSORES (INTERPOLACIÓN)
