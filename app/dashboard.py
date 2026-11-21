@@ -555,30 +555,124 @@ elif menu == "Módulo 3: Oscilaciones":
 # MÓDULO 4: SENSORES (INTERPOLACIÓN)
 # ==========================================
 elif menu == "Módulo 4: Sensores":
-    st.title("Consola de Reconstrucción de Sensores")
+    st.markdown("<h1 style='font-family: Courier New; color: #58a6ff;'>📡 Consola 04 // Reconstrucción de Sensores</h1>", unsafe_allow_html=True)
+    
+    # --- PANEL EXPLICATIVO DE MÉTODOS NUMÉRICOS ---
+    with st.expander("📚 Ver Fundamento Numérico y Fórmulas Matemáticas", expanded=False):
+        st.markdown("""
+        ### 🧮 Herramientas Numéricas en esta Consola
+        
+        Esta consola reconstruye datos faltantes de telemetría utilizando polinomios que pasan exactamente por los puntos conocidos.
+        
+        **1. Interpolación de Lagrange:**
+        *   *¿Qué hace?* Crea un polinomio único de grado \(n-1\) que pasa por \(n\) puntos. Se usa para estimar el valor de un sensor en un instante \(x\) donde no hubo lectura.
+        *   *Fórmula base:* 
+        """)
+        st.latex(r"P(x) = \sum_{i=0}^{n} y_i \prod_{j \neq i} \frac{x - x_j}{x_i - x_j}")
+        st.markdown("""
+        **2. Teoría de Errores:**
+        *   *¿Qué hace?* Compara el valor estimado por el polinomio con el valor real (que conocemos porque los datos son sintéticos) para medir la confiabilidad.
+        *   *Fórmula base:* 
+        """)
+        st.latex(r"E_{relativo} = \frac{|y_{real} - y_{estimado}|}{|y_{real}|} \times 100\%")
+        st.markdown("""
+        **3. Mal Condicionamiento (Nodos Duplicados):**
+        *   *¿Qué hace?* Si dos sensores envían datos en el mismo instante de tiempo (\(x_i = x_j\)), la fórmula de Lagrange divide por cero. Esto es un fallo físico y matemático irrecuperable.
+        """)
+    
+    st.divider()
+
+    # 1. Controles en la barra lateral
     escenario = st.sidebar.selectbox("Escenario Operativo", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
     
-    if escenario == "NORMAL": x_p = np.array([0, 1, 2, 4, 5]); y_p = np.array([0, 0.84, 0.91, -0.75, -0.95])
-    elif escenario == "ESTRÉS": x_p = np.array([0, 0.1, 0.2, 4.8, 5.0]); y_p = np.array([0, 0.1, 0.2, -0.99, -0.95])
-    else: x_p = np.array([0, 1, 1, 4, 5]); y_p = np.array([0, 0.84, 0.91, -0.75, -0.95])
+    # Datos sintéticos que simulan la lectura de 5 sensores en diferentes tiempos (x)
+    if escenario == "NORMAL":
+        x_p = np.array([0, 1, 2, 4, 5])
+        y_p = np.array([0, 0.84, 0.91, -0.75, -0.95]) # Simula una curva senoidal
+        x_real = 3.0
+        y_real = np.sin(3.0) # Valor real de sin(3) para comparar
+    elif escenario == "ESTRÉS":
+        # Nodos muy pegados (oscilación extrema del polinomio)
+        x_p = np.array([0, 0.1, 0.2, 4.8, 5.0])
+        y_p = np.array([0, 0.1, 0.2, -0.99, -0.95])
+        x_real = 3.0
+        y_real = np.sin(3.0)
+    else: 
+        # MAL CONDICIONADO: Nodos duplicados en X (Falla de sensores)
+        x_p = np.array([0, 1, 1, 4, 5])
+        y_p = np.array([0, 0.84, 0.91, -0.75, -0.95])
+        x_real = 3.0
+        y_real = np.sin(3.0)
     
-    x_faltante = st.sidebar.slider("Punto de sensor faltante (x)", 0.0, 5.0, 3.0)
+    x_faltante = st.sidebar.slider("Tiempo del sensor perdido (x)", 0.0, 5.0, float(x_real))
     
-    if st.sidebar.button("Interpolar"):
-        st.header(f"Resultados de Reconstrucción: {escenario}")
-        
-        if escenario == "MAL CONDICIONADO":
-            st.error("🔴 **ALERTA DE SENSOR:** Nodos duplicados detectados (x=1 repetido). Falla matemática inminente (División por cero).")
+    ejecutar = st.sidebar.button("▶ GUARDAR EN HISTORIAL", type="primary", use_container_width=True)
+
+    # 2. Lógica de simulación automática
+    # Verificamos si hay nodos duplicados para evitar el crash de Python
+    if len(np.unique(x_p)) != len(x_p):
+        y_est = None
+        error = None
+    else:
+        y_est = lagrange(x_p, y_p, x_faltante)
+        error = abs(y_real - y_est) / abs(y_real) * 100 if y_real != 0 else 0
+
+    # 3. Guardar en la base de datos
+    if ejecutar:
+        if y_est is not None:
+            guardar_simulacion(f"M4 - {escenario}", x_faltante, 0, 0, 0, y_est, y_est, error)
+            st.toast("✅ Reconstrucción guardada en el historial", icon="💾")
         else:
-            y_est = lagrange(x_p, y_p, x_faltante)
-            st.success("🟢 **RECONSTRUCCIÓN EXITOSA:** El dato faltante ha sido estimado.")
-            st.metric("Valor reconstruido", f"{y_est:.4f}")
-            
-            fig, ax = plt.subplots()
-            x_plot = np.linspace(0, 5, 100)
-            y_plot = [lagrange(x_p, y_p, xi) for xi in x_plot]
-            ax.plot(x_plot, y_plot, 'b-'); ax.scatter(x_p, y_p, color='red'); ax.scatter([x_faltante], [y_est], color='green', s=100)
-            st.pyplot(fig)
+            st.toast("❌ No se puede guardar una simulación fallida", icon="⚠️")
+
+    # 4. Renderizado Visual
+    st.markdown("### Estado de la Red de Sensores")
+    
+    if y_est is None:
+        # Semáforo de fallo
+        st.markdown('<div style="background-color:#da3633; padding:20px; border-radius:8px; border-left:10px solid #f85149; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🔴 FALLO DE SENSOR: Nodos duplicados detectados (x=1). Imposible reconstruir el dato.</div>', unsafe_allow_html=True)
+        st.warning("⚠️ **Inestabilidad Numérica (Mal Condicionamiento):** La fórmula de Lagrange presenta una división por cero cuando \(x_i = x_j\). No se puede continuar con la interpolación.")
+    else:
+        # Semáforo de éxito
+        st.markdown(f'<div style="background-color:#238636; padding:20px; border-radius:8px; border-left:10px solid #2ea043; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🟢 RECONSTRUCCIÓN EXITOSA: Dato recuperado en x={x_faltante:.2f}</div>', unsafe_allow_html=True)
+
+        if escenario == "ESTRÉS":
+            st.warning("⚠️ **Oscilación de Runge:** Con nodos muy pegados en los extremos, el polinomio de Lagrange puede oscilar salvajemente en el centro. Revisa el gráfico.")
+
+        # Métricas
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Valor Real (Teórico)", f"{y_real:.4f}")
+        c2.metric("Valor Estimado (Lagrange)", f"{y_est:.4f}")
+        c3.metric("Error Relativo", f"{error:.2f} %", delta_color="inverse")
+
+        # Gráfico (Oscuro)
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(12, 5))
+        
+        # Curva interpolada
+        x_plot = np.linspace(0, 5, 200)
+        y_plot = [lagrange(x_p, y_p, xi) for xi in x_plot]
+        
+        ax.plot(x_plot, y_plot, color='#58a6ff', linewidth=2, label='Curva Interpolada')
+        ax.scatter(x_p, y_p, color='#f85149', s=80, zorder=5, label='Sensores Conocidos')
+        ax.scatter([x_faltante], [y_est], color='#2ea043', s=150, marker='*', zorder=6, label='Dato Reconstruido')
+        
+        ax.set_title(f'Reconstrucción de Telemetría usando Interpolación')
+        ax.set_xlabel('Tiempo (x)')
+        ax.set_ylabel('Lectura del Sensor (y)')
+        ax.legend()
+        ax.grid(True, color='#30363d', linestyle=':')
+        
+        st.pyplot(fig)
+
+        # Tabla de datos
+        with st.expander("📋 Ver Tabla de Nodos de los Sensores"):
+            df_nodos = pd.DataFrame({
+                "Sensor": [f"Sensor {i+1}" for i in range(len(x_p))],
+                "Tiempo (x)": x_p,
+                "Lectura (y)": y_p
+            })
+            st.dataframe(df_nodos, use_container_width=True, hide_index=True)
 
 # ==========================================
 # MÓDULO 5: SISTEMAS LINEALES
