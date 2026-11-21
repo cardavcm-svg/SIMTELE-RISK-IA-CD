@@ -45,49 +45,114 @@ st.sidebar.title("🚡 SIMTELE-RISK")
 menu = st.sidebar.radio("Navegación", ["Inicio", "Módulo 1: Detención", "Módulo 2: Deterioro", "Módulo 3: Oscilaciones", "Módulo 4: Sensores", "Módulo 5: Sistemas Lineales", "🤖 Predicción IA", "Historial"])
 
 # ==========================================
-# INICIO: PANEL DE CONTROL GLOBAL
+# INICIO: PANEL DE CONTROL GLOBAL (CENTRO DE COMANDOS)
 # ==========================================
 if menu == "Inicio":
-    st.title("🚡 Centro de Comandos: SIMTELE-RISK")
-    st.markdown("### Monitor de Seguridad Operativa en Tiempo Real")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(label="Estado del Sistema", value="OPERATIVO", delta="Normal", delta_color="normal")
-    col2.metric(label="Cabinas en Línea", value="24/24")
-    col3.metric(label="Viento Actual", value="12 km/h", delta="Moderado", delta_color="off")
-    col4.metric(label="Alertas Activas", value="0", delta="Ninguna", delta_color="inverse")
+    # --- ESTILOS CSS PARA DARLE UN LOOK INDUSTRIAL/PROFESIONAL ---
+    st.markdown("""
+        <style>
+        /* Fondo principal más oscuro */
+        .stApp { background-color: #0E1117; }
+        
+        /* Estilo de las tarjetas (métricas) */
+        div[data-testid="metric-container"] {
+            background-color: #1E2129;
+            border-left: 5px solid #00A86B;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        /* Color del texto de las métricas */
+        div[data-testid="metric-container"] > div > div > div > div {
+            color: #FFFFFF;
+        }
+        
+        /* Título principal */
+        h1 { color: #FFFFFF; text-shadow: 0px 0px 10px rgba(255,255,255,0.2); }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # --- CABECERA DEL PANEL ---
+    col_titulo, col_logo = st.columns([4, 1])
+    with col_titulo:
+        st.title("🚡 Centro de Comandos: SIMTELE-RISK")
+        st.markdown("<h4 style='color: #00A86B; margin-top: -15px;'>SISTEMA OPERATIVO | MONITOREO EN TIEMPO REAL</h4>", unsafe_allow_html=True)
     
     st.divider()
-    st.subheader("Consolas de Diagnóstico")
-    col_a, col_b = st.columns(2)
+
+    # --- FILA DE MÉTRICAS CRÍTICAS (Telemetría) ---
+    st.subheader("📊 Telemetría General")
+    col1, col2, col3, col4 = st.columns(4)
     
+    col1.metric(label="Estado del Sistema", value="OPERATIVO", delta="Normal", delta_color="normal")
+    col2.metric(label="Cabinas en Línea", value="24/24", delta="Estable", delta_color="off")
+    col3.metric(label="Velocidad del Viento", value="12 km/h", delta="Moderado", delta_color="inverse")
+    col4.metric(label="Alertas Activas", value="0", delta="Sin riesgos", delta_color="normal")
+
+    st.divider()
+
+    # --- CONSOLAS DE DIAGNÓSTICO ---
+    st.subheader("🖥️ Consolas de Diagnóstico")
+    st.write("Accede a las herramientas de análisis y simulación del sistema.")
+
+    # Panel de Módulos (2 columnas)
+    col_a, col_b = st.columns(2)
+
     with col_a:
-        with st.container(border=True):
-            st.markdown("#### 🛑 Módulo 1: Detención de Emergencia")
-            st.write("Evaluación de frenado y cálculo de margen de seguridad.")
-            st.info("Estado: **LISTO** para simulación.")
-        with st.container(border=True):
-            st.markdown("#### 🌬️ Módulo 3: Oscilaciones por Viento")
-            st.write("Cálculo de desplazamiento acumulado por ráfagas.")
-            st.info("Estado: **LISTO** para simulación.")
-        with st.container(border=True):
-            st.markdown("#### 📐 Módulo 5: Calibración de Sensores")
-            st.write("Resolución de matrices de calibración \(Ax=b\).")
-            st.info("Estado: **LISTO** para calibración.")
+        with st.container():
+            st.markdown("### 🛑 Consola 1: Detención")
+            st.caption("Evaluación de frenado y márgenes de seguridad.")
+            if st.button("Abrir Módulo 1", use_container_width=True):
+                st.session_state.menu = "Módulo 1: Detención" # Esto es solo estético
+            st.success("Estado: **EN LÍNEA**")
+            st.divider()
+
+        with st.container():
+            st.markdown("### 🌬️ Consola 3: Viento")
+            st.caption("Análisis de oscilaciones y ráfagas.")
+            st.success("Estado: **EN LÍNEA**")
+            st.divider()
+
+        with st.container():
+            st.markdown("### 📐 Consola 5: Calibración")
+            st.caption("Sistemas lineales para ajuste de sensores.")
+            st.success("Estado: **EN LÍNEA**")
 
     with col_b:
-        with st.container(border=True):
-            st.markdown("#### ⚙️ Módulo 2: Deterioro Mecánico")
-            st.write("Predicción de tiempo hasta umbral de mantenimiento.")
-            st.info("Estado: **LISTO** para simulación.")
-        with st.container(border=True):
-            st.markdown("#### 📡 Módulo 4: Reconstrucción de Sensores")
-            st.write("Interpolación de datos faltantes en telemetría.")
-            st.info("Estado: **LISTO** para reconstrucción.")
-        with st.container(border=True):
-            st.markdown("#### 🤖 Predicción IA (Random Forest)")
-            st.write("Predicción instantánea de distancia usando Machine Learning.")
-            st.success("Modelo entrenado con 5,000 escenarios.")
+        with st.container():
+            st.markdown("### ⚙️ Consola 2: Deterioro")
+            st.caption("Mantenimiento predictivo de cabinas.")
+            st.success("Estado: **EN LÍNEA**")
+            st.divider()
+
+        with st.container():
+            st.markdown("### 📡 Consola 4: Telemetría")
+            st.caption("Reconstrucción de datos de sensores perdidos.")
+            st.success("Estado: **EN LÍNEA**")
+            st.divider()
+
+        with st.container():
+            st.markdown("### 🤖 Consola IA: Predicción")
+            st.caption("Machine Learning (Random Forest) para frenado.")
+            st.success("Estado: **ENTRENADA** (5,000 registros)")
+
+    # --- PANEL DE LOGS (Simulación de sistema) ---
+    st.divider()
+    st.subheader("📜 Registro de Eventos Reciente")
+    
+    # Creamos un dataframe falso solo para que parezca una consola de logs real
+    logs = pd.DataFrame({
+        "Hora": ["12:00:01", "12:01:15", "12:05:30", "12:10:00"],
+        "Evento": [
+            "Sistema iniciado correctamente.",
+            "Sincronización de sensores completada.",
+            "Simulación de frenado (Módulo 1) ejecutada.",
+            "Modelo de IA cargado en memoria."
+        ],
+        "Estado": ["OK", "OK", "ÉXITO", "OK"]
+    })
+    st.dataframe(logs, use_container_width=True, hide_index=True)
 
 # ==========================================
 # MÓDULO 1: DETENCIÓN
