@@ -183,19 +183,37 @@ if menu == "Inicio":
     st.dataframe(logs, use_container_width=True, hide_index=True)
 
 # ==========================================
-# MÓDULO 1: DETENCIÓN (SIMULACIÓN AUTOMÁTICA)
+# MÓDULO 1: DETENCIÓN (CON EXPLICACIÓN NUMÉRICA)
 # ==========================================
 elif menu == "Módulo 1: Detención":
     st.markdown("<h1 style='font-family: Courier New; color: #58a6ff;'>🛑 Consola 01 // Detención de Emergencia</h1>", unsafe_allow_html=True)
     
-    # Panel informativo
-    with st.expander("⚙️ Herramientas Numéricas Utilizadas", expanded=False):
+    # --- PANEL EXPLICATIVO DE MÉTODOS NUMÉRICOS ---
+    with st.expander("📚 Ver Fundamento Numérico y Fórmulas Matemáticas", expanded=False):
         st.markdown("""
-        *   **EDOs:** Runge-Kutta 4 (RK4).
-        *   **Integración Numérica:** Trapecio/Simpson.
-        *   **Teoría de Errores:** Error relativo porcentual.
-        *   **Mal Condicionamiento:** Inestabilidad por paso de integración grande.
+        ### 🧮 Herramientas Numéricas en esta Consola
+        
+        Esta consola resuelve el problema de frenado modelando la física como Ecuaciones Diferenciales Ordinarias (EDOs).
+        
+        **1. Ecuaciones Diferenciales Ordinarias (Runge-Kutta 4):**
+        *   *¿Qué hace?* Calcula la velocidad y posición paso a paso en el tiempo.
+        *   *Fórmula base:*
         """)
+        st.latex(r"\frac{dx}{dt} = v(t), \quad \frac{dv}{dt} = -a(v,t)")
+        st.markdown("""
+        *   *Implementación:* Usamos el método de **RK4** (4to orden) con un paso de integración \(h=0.01\). Esto nos da una precisión milimétrica comparada con la solución analítica.
+        
+        **2. Teoría de Errores:**
+        *   *¿Qué hace?* Cuantifica la diferencia entre el cálculo de la máquina y el cálculo exacto.
+        *   *Fórmula base:* 
+        """)
+        st.latex(r"E_r = \frac{|D_{analitica} - D_{numerica}|}{D_{analitica}} \times 100\%")
+        st.markdown("""
+        **3. Mal Condicionamiento:**
+        *   *¿Qué hace?* Demuestra cómo un paso de integración \(h\) inadecuado (muy grande) amplifica el error de truncamiento, volviendo inestable el método.
+        """)
+    
+    st.divider()
 
     # 1. Controles en la barra lateral
     escenario = st.sidebar.selectbox("Escenario Operativo", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
@@ -212,17 +230,16 @@ elif menu == "Módulo 1: Detención":
     a = st.sidebar.number_input("Desaceleración (m/s²)", value=a_def)
     d_disp = st.sidebar.number_input("Distancia disponible (m)", value=d_def)
     
-    # El botón ahora solo sirve para forzar un "rerun" (actualización) de la página
-    ejecutar = st.sidebar.button("▶ ACTUALIZAR TELEMETRÍA", type="primary", use_container_width=True)
+    ejecutar = st.sidebar.button("▶ GUARDAR EN HISTORIAL", type="primary", use_container_width=True)
 
     # 2. Lógica de simulación automática
-    # Esto se ejecuta SIEMPRE que entras a la página o cambias un parámetro
     d_ana = (v0 * tr) + (v0**2 / (2*a))
     t_ana = tr + (v0/a)
     
     def f_x(t, x, v): return v
     def f_v(t, x, v): return -a if t > tr else 0.0
     
+    # El mal condicionamiento se da por el paso de integración grande
     paso = 0.01 if escenario != "MAL CONDICIONADO" else 0.5
     
     t_vals, x_vals, v_vals = rk4(f_x, f_v, 0, 0, v0, t_ana + 2.0, paso)
@@ -234,12 +251,12 @@ elif menu == "Módulo 1: Detención":
     err_rel = abs(d_ana - d_num) / d_ana * 100
     margen = d_disp - d_num
 
-    # 3. Guardar en la base de datos SOLO si el usuario hizo clic en el botón
+    # 3. Guardar en la base de datos (solo si presiona el botón)
     if ejecutar:
         guardar_simulacion(escenario, v0, tr, a, d_disp, d_ana, d_num, err_rel)
         st.toast("✅ Simulación guardada en el historial", icon="💾")
 
-    # 4. Renderizado de la interfaz (SIEMPRE SE VE)
+    # 4. Renderizado Visual (Siempre visible)
     
     # Semáforo
     if margen > 5.0: 
@@ -250,12 +267,12 @@ elif menu == "Módulo 1: Detención":
         st.markdown(f'<div style="background-color:#da3633; padding:20px; border-radius:8px; border-left:10px solid #f85149; font-family:Courier; font-size:18px; font-weight:bold; color:white; margin-bottom:20px;">🔴 PELIGRO DE COLISIÓN // Déficit: {abs(margen):.2f} m</div>', unsafe_allow_html=True)
         
     if escenario == "MAL CONDICIONADO":
-        st.warning(f"⚠️ **Inestabilidad Numérica:** Paso de integración h={paso}. Error severo por mal condicionamiento.")
+        st.warning(f"⚠️ **Inestabilidad Numérica (Mal Condicionamiento):** Se usó un paso de integración \(h={paso}\). Al ser tan grande, el error de truncamiento crece y el método pierde precisión.")
 
     # Métricas
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Distancia Analítica", f"{d_ana:.2f} m")
-    c2.metric("Distancia Numérica", f"{d_num:.2f} m")
+    c2.metric("Distancia Numérica (RK4)", f"{d_num:.2f} m")
     c3.metric("Tiempo de Detención", f"{t_num:.2f} s")
     c4.metric("Error Relativo", f"{err_rel:.4f} %", delta_color="inverse")
 
@@ -263,21 +280,24 @@ elif menu == "Módulo 1: Detención":
     plt.style.use('dark_background')
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 4))
     
-    ax1.plot(t_vals, v_vals, color='#58a6ff', linewidth=2)
-    ax1.axvline(x=tr, color='#d29922', linestyle='--')
-    ax1.axvline(x=t_num, color='#2ea043', linestyle='--')
-    ax1.set_title('Perfil de Velocidad')
+    ax1.plot(t_vals, v_vals, color='#58a6ff', linewidth=2, label='Velocidad')
+    ax1.axvline(x=tr, color='#d29922', linestyle='--', label='Fin Reacción')
+    ax1.axvline(x=t_num, color='#2ea043', linestyle='--', label='Detención')
+    ax1.set_title('Perfil de Velocidad (RK4)')
+    ax1.legend()
     ax1.grid(True, color='#30363d', linestyle=':')
     
-    ax2.plot(t_vals, x_vals, color='#d2a8ff', linewidth=2)
-    ax2.axhline(y=d_disp, color='#f85149', linestyle='--')
-    ax2.set_title('Perfil de Posición')
+    ax2.plot(t_vals, x_vals, color='#d2a8ff', linewidth=2, label='Posición')
+    ax2.axhline(y=d_disp, color='#f85149', linestyle='--', label='Límite')
+    ax2.set_title('Perfil de Posición (RK4)')
+    ax2.legend()
     ax2.grid(True, color='#30363d', linestyle=':')
     
     st.pyplot(fig)
 
     # Tabla de iteraciones
-    with st.expander("📋 Ver Tabla de Discretización (RK4)"):
+    with st.expander("📋 Ver Tabla de Discretización (Iteraciones del Método)"):
+        st.write(f"Método: Runge-Kutta 4 | Paso de integración (h) = {paso}")
         df_pasos = pd.DataFrame({
             "Iteración": range(1, 11),
             "Tiempo t (s)": t_vals[:10],
