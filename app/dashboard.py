@@ -41,9 +41,20 @@ init_db()
 st.set_page_config(page_title="SIMTELE-RISK", page_icon="🚡", layout="wide")
 
 # --- MENÚ LATERAL ---
-st.sidebar.title("🚡 SIMTELE-RISK")
-menu = st.sidebar.radio("Navegación", ["Inicio", "Módulo 1: Detención", "Módulo 2: Deterioro", "Módulo 3: Oscilaciones", "Módulo 4: Sensores", "Módulo 5: Sistemas Lineales", "🤖 Predicción IA", "Historial"])
+# Inicializamos el estado del menú si no existe
+if 'menu' not in st.session_state:
+    st.session_state.menu = "Inicio"
 
+# Usamos una función para cambiar el menú desde los botones del inicio
+def cambiar_menu(nuevo_menu):
+    st.session_state.menu = nuevo_menu
+
+# El radio button ahora usa el estado del session_state
+opciones_menu = ["Inicio", "Módulo 1: Detención", "Módulo 2: Deterioro", "Módulo 3: Oscilaciones", "Módulo 4: Sensores", "Módulo 5: Sistemas Lineales", "🤖 Predicción IA", "Historial"]
+menu = st.sidebar.radio("Navegación", opciones_menu, index=opciones_menu.index(st.session_state.menu))
+
+# Sincronizamos el menú lateral con el estado
+st.session_state.menu = menu
 # ==========================================
 # INICIO: PANEL DE CONTROL GLOBAL (CENTRO DE COMANDOS)
 # ==========================================
