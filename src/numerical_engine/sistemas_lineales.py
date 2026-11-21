@@ -44,3 +44,22 @@ def lu_doolittle(A, b):
     for i in range(n-1, -1, -1):
         x[i] = (y[i] - sum(U[i][k] * x[k] for k in range(i+1, n))) / U[i][i]
     return x
+
+def gradiente_conjugado(A, b, tol=1e-6, max_iter=100):
+    n = len(b)
+    x = np.zeros(n)
+    r = b - np.dot(A, x)
+    p = r.copy()
+    rsold = np.dot(r, r)
+    
+    for i in range(max_iter):
+        Ap = np.dot(A, p)
+        alpha = rsold / np.dot(p, Ap)
+        x = x + alpha * p
+        r = r - alpha * Ap
+        rsnew = np.dot(r, r)
+        if np.sqrt(rsnew) < tol:
+            return x, i+1
+        p = r + (rsnew / rsold) * p
+        rsold = rsnew
+    return x, max_iter
