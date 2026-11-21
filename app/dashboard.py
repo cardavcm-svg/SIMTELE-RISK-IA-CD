@@ -551,7 +551,6 @@ elif menu == "Módulo 3: Oscilaciones":
             "Error Absoluto": [abs(val_trap - ref), abs(val_simp - ref), abs(val_romb - ref)]
         })
         st.dataframe(df_err, use_container_width=True, hide_index=True)
-
 # ==========================================
 # MÓDULO 4: SENSORES (INTERPOLACIÓN)
 # ==========================================
