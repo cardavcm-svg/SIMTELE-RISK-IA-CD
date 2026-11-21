@@ -186,51 +186,114 @@ if menu == "Inicio":
 # MÓDULO 1: DETENCIÓN
 # ==========================================
 elif menu == "Módulo 1: Detención":
-    st.title("Consola de Detención de Emergencia")
+    st.title("🛑 Consola de Detención de Emergencia")
+    
+    # Panel informativo de métodos numéricos
+    with st.expander("⚙️ Herramientas Numéricas Utilizadas en este Módulo", expanded=False):
+        st.markdown("""
+        *   **Ecuaciones Diferenciales Ordinarias (EDOs):** Método de **Runge-Kutta 4to Orden (RK4)** para calcular la trayectoria.
+        *   **Integración Numérica:** Verificación del desplazamiento mediante **Trapecio** y **Simpson 1/3**.
+        *   **Teoría de Errores:** Cálculo del **Error Relativo Porcentual** comparando la solución numérica con la analítica exacta.
+        *   **Mal Condicionamiento:** Alteración del paso de integración (\(h\)) para demostrar inestabilidad numérica.
+        """)
+
     escenario = st.sidebar.selectbox("Escenario Operativo", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
     
-    if escenario == "NORMAL": v0_def, tr_def, a_def, d_def = 5.0, 1.0, 1.0, 30.0
-    elif escenario == "ESTRÉS": v0_def, tr_def, a_def, d_def = 10.0, 2.0, 0.8, 85.0
-    else: v0_def, tr_def, a_def, d_def = 12.0, 3.0, 0.5, 50.0
+    if escenario == "NORMAL":
+        v0_def, tr_def, a_def, d_def = 5.0, 1.0, 1.0, 30.0
+    elif escenario == "ESTRÉS":
+        v0_def, tr_def, a_def, d_def = 10.0, 2.0, 0.8, 85.0
+    else: 
+        v0_def, tr_def, a_def, d_def = 12.0, 3.0, 0.5, 50.0
     
     v0 = st.sidebar.number_input("Velocidad inicial (m/s)", value=v0_def)
     tr = st.sidebar.number_input("Tiempo de reacción (s)", value=tr_def)
     a = st.sidebar.number_input("Desaceleración (m/s²)", value=a_def)
     d_disp = st.sidebar.number_input("Distancia disponible (m)", value=d_def)
     
-    if st.sidebar.button("Ejecutar Simulación"):
+    if st.sidebar.button("Ejecutar Simulación", type="primary"):
         d_ana = (v0 * tr) + (v0**2 / (2*a))
         t_ana = tr + (v0/a)
+        
         def f_x(t, x, v): return v
         def f_v(t, x, v): return -a if t > tr else 0.0
         
+        # Paso dinámico
         paso = 0.01 if escenario != "MAL CONDICIONADO" else 0.5
+        
         t_vals, x_vals, v_vals = rk4(f_x, f_v, 0, 0, v0, t_ana + 2.0, paso)
         idx = np.where(v_vals <= 0)[0]
         d_num = x_vals[idx[0]] if len(idx) > 0 else x_vals[-1]
+        t_num = t_vals[idx[0]] if len(idx) > 0 else t_vals[-1]
+        
         err_rel = abs(d_ana - d_num) / d_ana * 100
         
-        st.header(f"Resultados de Telemetría: {escenario}")
+        # --- SEMÁFORO PRINCIPAL ---
+        st.markdown("### Estado de la Cabina")
         margen = d_disp - d_num
         
-        if margen > 5.0: st.success(f"🟢 **ESTADO: SEGURO** | Margen de Frenado: {margen:.2f} m")
-        elif margen > 0: st.warning(f"🟡 **ESTADO: PRECAUCIÓN** | Margen Crítico: {margen:.2f} m")
-        else: st.error(f"🔴 **ESTADO: PELIGRO DE COLISIÓN** | Déficit: {abs(margen):.2f} m")
+        if margen > 5.0: 
+            st.success(f"🟢 **ESTADO: SEGURO** | Margen de Frenado: {margen:.2f} m | La cabina se detiene a salvo.")
+        elif margen > 0: 
+            st.warning(f"🟡 **ESTADO: PRECAUCIÓN** | Margen Crítico: {margen:.2f} m | Frenado al límite.")
+        else: 
+            st.error(f"🔴 **ESTADO: PELIGRO DE COLISIÓN** | Déficit: {abs(margen):.2f} m | ¡Frenado insuficiente!")
             
         if escenario == "MAL CONDICIONADO":
-            st.warning("⚠️ Alerta de Inestabilidad: El paso de integración h=0.5 es demasiado grande, generando un error numérico severo (Mal Condicionamiento).")
-            
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Distancia Teórica", f"{d_ana:.4f} m")
-        c2.metric("Distancia Calculada", f"{d_num:.4f} m")
-        c3.metric("Error de Cálculo", f"{err_rel:.4f} %")
+            st.info(f"🔬 **Análisis Numérico:** El paso de integración es h={paso}. Un paso grande genera un error de truncamiento severo, evidenciando el mal condicionamiento del método RK4 en este escenario.")
+        
+        st.divider()
+        
+        # --- TELEMETRÍA (Métricas) ---
+        st.markdown("#### 📊 Telemetría de Frenado")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Distancia Analítica", f"{d_ana:.4f} m")
+        c2.metric("Distancia Numérica (RK4)", f"{d_num:.4f} m")
+        c3.metric("Tiempo de Detención", f"{t_num:.2f} s")
+        c4.metric("Error Relativo", f"{err_rel:.4f} %", delta_color="inverse")
         
         guardar_simulacion(escenario, v0, tr, a, d_disp, d_ana, d_num, err_rel)
+        st.toast("✅ Simulación guardada en el historial", icon="💾")
         
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-        ax1.plot(t_vals, v_vals, 'b-'); ax1.set_title('Perfil de Velocidad'); ax1.grid(True)
-        ax2.plot(t_vals, x_vals, 'm-'); ax2.axhline(y=d_disp, color='r', linestyle='--'); ax2.set_title('Perfil de Posición'); ax2.grid(True)
+        st.divider()
+        
+        # --- GRÁFICOS ---
+        st.markdown("#### 📈 Análisis Gráfico")
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+        
+        # Gráfico 1: Velocidad
+        ax1.plot(t_vals, v_vals, 'b-', linewidth=2, label='Velocidad (RK4)')
+        ax1.axvline(x=tr, color='orange', linestyle='--', label='Fin de Reacción')
+        ax1.axvline(x=t_num, color='green', linestyle='--', label='Detención Total')
+        ax1.set_xlabel('Tiempo (s)')
+        ax1.set_ylabel('Velocidad (m/s)')
+        ax1.set_title('Perfil de Velocidad')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # Gráfico 2: Posición
+        ax2.plot(t_vals, x_vals, 'm-', linewidth=2, label='Posición (RK4)')
+        ax2.axhline(y=d_disp, color='red', linestyle='--', label='Límite Disponible')
+        ax2.set_xlabel('Tiempo (s)')
+        ax2.set_ylabel('Posición (m)')
+        ax2.set_title('Perfil de Posición')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        
         st.pyplot(fig)
+        
+        # --- TABLA DE ITERACIONES ---
+        st.markdown("#### 📋 Tabla de Refinamiento Numérico (Primeros 10 pasos)")
+        st.write("Muestra la evolución paso a paso del método Runge-Kutta 4.")
+        
+        # Creamos un dataframe con los primeros 10 pasos
+        df_pasos = pd.DataFrame({
+            "Paso": range(1, 11),
+            "Tiempo t (s)": t_vals[:10],
+            "Posición x (m)": x_vals[:10],
+            "Velocidad v (m/s)": v_vals[:10]
+        })
+        st.dataframe(df_pasos, use_container_width=True)
 
 # ==========================================
 # MÓDULO 2: DETERIORO (RAÍCES)
