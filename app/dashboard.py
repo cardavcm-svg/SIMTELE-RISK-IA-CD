@@ -436,30 +436,114 @@ elif menu == "Módulo 4: Sensores":
             st.dataframe(pd.DataFrame({"Sensor": [f"S{i+1}" for i in range(len(x_p))], "x": x_p, "y": y_p}), use_container_width=True, hide_index=True)
 
 # ==========================================
-# PREDICCIÓN IA
+# PREDICCIÓN IA (CON DISEÑO DE CENTRO DE COMANDOS)
 # ==========================================
 elif menu == "🤖 Predicción IA":
-    st.title("Consola de Predicción con Machine Learning")
+    st.markdown("<h1 style='font-family: Courier New; color: #58a6ff;'>🤖 Consola 05 // Predicción con Machine Learning</h1>", unsafe_allow_html=True)
+    
+    # --- PANEL EXPLICATIVO ---
+    with st.expander("📚 Ver Fundamento de Machine Learning", expanded=False):
+        st.markdown("""
+        ### 🧠 ¿Por qué usar IA en un Centro de Comandos?
+        
+        Los métodos numéricos (EDOs, Raíces, Integración) son exactos, pero requieren **calcular paso a paso**. En una emergencia real, el operador no tiene tiempo de esperar a que la computadora simule 5,000 pasos de RK4.
+        
+        **La solución:** Entrenamos un modelo de **Random Forest** con 5,000 simulaciones numéricas previas. Así, el modelo *aprende* la física del frenado y puede predecir la distancia en **milisegundos**.
+        
+        **1. Algoritmo Utilizado:**
+        *   **Random Forest Regressor:** Crea múltiples árboles de decisión y promedia sus resultados para reducir el error.
+        
+        **2. Teoría de Errores (Métricas):**
+        *   *MAE (Error Absoluto Medio):* Promedio de los errores en metros.
+        *   *RMSE (Raíz del Error Cuadrático Medio):* Penaliza más los errores grandes.
+        
+        **3. Interpretabilidad (SHAP):**
+        *   Usamos la "Importancia de las Variables" para saber qué factor influye más en el riesgo (ej. la velocidad inicial).
+        """)
+    
+    st.divider()
+
+    # 1. Cargar modelo
     try:
         ruta_modelo = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src', 'numerical_engine', 'ml_models', 'modelo_rf.pkl'))
         modelo = joblib.load(ruta_modelo)
         
-        v0_ia = st.sidebar.number_input("Velocidad inicial", value=7.5); tr_ia = st.sidebar.number_input("Tiempo de reacción", value=1.5)
-        a_ia = st.sidebar.number_input("Desaceleración", value=1.2); d_disp_ia = st.sidebar.number_input("Distancia disponible", value=50.0)
+        # 2. Parámetros (Simulación automática)
+        escenario = st.sidebar.selectbox("Escenario de Prueba", ["NORMAL", "ESTRÉS", "MAL CONDICIONADO"])
         
-        if st.sidebar.button("Predecir"):
-            entrada = np.array([[v0_ia, tr_ia, a_ia, d_disp_ia]]); prediccion = modelo.predict(entrada)[0]
-            st.header("Resultados de la IA")
+        if escenario == "NORMAL":
+            v0_def, tr_def, a_def, d_def = 7.5, 1.5, 1.2, 50.0
+        elif escenario == "ESTRÉS":
+            v0_def, tr_def, a_def, d_def = 15.0, 3.0, 0.5, 120.0
+        else:
+            v0_def, tr_def, a_def, d_def = 20.0, 4.0, 0.3, 30.0
             
-            if prediccion > d_disp_ia: 
-                st.error(f"🔴 PELIGRO: La IA predice colisión. Distancia: {prediccion:.2f} m.")
-            else: 
-                st.success(f"🟢 SEGURO: La IA predice detención segura. Distancia: {prediccion:.2f} m.")
-                
-            importancias = modelo.feature_importances_; variables = ['Velocidad', 'T. Reacción', 'Desaceleración', 'Distancia']
-            fig, ax = plt.subplots(figsize=(8, 3)); ax.barh(variables, importancias, color='teal'); ax.set_title('Importancia de las variables'); st.pyplot(fig)
-    except Exception as e: 
-        st.warning("Modelo de IA no encontrado.")
+        v0_ia = st.sidebar.number_input("Velocidad inicial (m/s)", value=v0_def)
+        tr_ia = st.sidebar.number_input("Tiempo de reacción (s)", value=tr_def)
+        a_ia = st.sidebar.number_input("Desaceleración (m/s²)", value=a_def)
+        d_disp_ia = st.sidebar.number_input("Distancia disponible (m)", value=d_def)
+        
+        # Botón para guardar en historial (igual que en los otros módulos)
+        ejecutar_ia = st.sidebar.button("▶ GUARDAR PREDICCIÓN EN HISTORIAL", type="primary", use_container_width=True)
+        
+        # 3. Predicción Automática
+        entrada = np.array([[v0_ia, tr_ia, a_ia, d_disp_ia]])
+        prediccion = modelo.predict(entrada)[0]
+        
+        if ejecutar_ia:
+            # Guardamos en la base de datos
+            guardar_simulacion(f"IA - {escenario}", v0_ia, tr_ia, a_ia, d_disp_ia, prediccion, prediccion, 0.0)
+            st.toast("✅ Predicción guardada en el historial", icon="💾")
+            
+        # 4. Semáforo de Riesgo
+        margen_ia = d_disp_ia - prediccion
+        
+        if margen_ia > 5.0: 
+            st.markdown(f'<div style="background-color:#238636; padding:20px; border-radius:8px; border-left:10px solid #2ea043; font-family:Courier; font-weight:bold; color:white; margin-bottom:20px;">🟢 RIESGO BAJO // La IA predice detención segura. Margen: {margen_ia:.2f} m</div>', unsafe_allow_html=True)
+        elif margen_ia > 0: 
+            st.markdown(f'<div style="background-color:#9e6a03; padding:20px; border-radius:8px; border-left:10px solid #d29922; font-family:Courier; font-weight:bold; color:white; margin-bottom:20px;">🟡 RIESGO MODERADO // Frenado al límite. Margen: {margen_ia:.2f} m</div>', unsafe_allow_html=True)
+        else: 
+            st.markdown(f'<div style="background-color:#da3633; padding:20px; border-radius:8px; border-left:10px solid #f85149; font-family:Courier; font-weight:bold; color:white; margin-bottom:20px;">🔴 RIESGO CRÍTICO // Colisión predicha. Déficit: {abs(margen_ia):.2f} m</div>', unsafe_allow_html=True)
+            
+        if escenario == "MAL CONDICIONADO":
+            st.warning("⚠️ **Análisis de IA:** En este escenario extremo, la IA extrapola datos fuera del rango de entrenamiento, demostrando la importancia de una buena base de datos.")
+            
+        # 5. Métricas
+        c1, c2 = st.columns(2)
+        c1.metric("Distancia Predicha por IA", f"{prediccion:.2f} m")
+        c2.metric("Margen de Seguridad", f"{margen_ia:.2f} m", delta_color="inverse")
+        
+        # 6. Gráfico de Importancia
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(10, 4))
+        
+        importancias = modelo.feature_importances_
+        variables = ['Velocidad Inicial', 'T. Reacción', 'Desaceleración', 'Distancia Disp.']
+        
+        # Colores condicionales
+        colors = ['#f85149' if imp > 0.4 else '#58a6ff' for imp in importancias]
+        
+        ax.barh(variables, importancias, color=colors)
+        ax.set_title('Importancia de las Variables en la Predicción')
+        ax.set_xlabel('Nivel de Influencia (0 a 1)')
+        ax.grid(True, color='#30363d', linestyle=':')
+        
+        for i, v in enumerate(importancias):
+            ax.text(v + 0.01, i, f"{v:.2f}", color='white', va='center')
+            
+        st.pyplot(fig)
+        
+        # 7. Tabla de Datos de Entrada
+        with st.expander("📋 Ver Datos de Entrada (Telemetría)"):
+            df_input = pd.DataFrame({
+                "Parámetro": ["Velocidad Inicial", "Tiempo de Reacción", "Desaceleración", "Distancia Disponible"],
+                "Valor": [f"{v0_ia} m/s", f"{tr_ia} s", f"{a_ia} m/s²", f"{d_disp_ia} m"]
+            })
+            st.dataframe(df_input, use_container_width=True, hide_index=True)
+            
+    except Exception as e:
+        st.error(f"❌ **Error Crítico:** No se encontró el modelo de IA entrenado.")
+        st.info("Asegúrate de haber ejecutado el script `generar_y_entrenar.py` en tu computadora.")
 
 # ==========================================
 # HISTORIAL
